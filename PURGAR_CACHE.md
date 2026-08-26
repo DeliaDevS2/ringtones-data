@@ -12,6 +12,13 @@ Sabrás que funcionó cuando la página muestre un mensaje que dice `"status": "
 * **tonos_queen:** [Purgar Caché de tonos_queen](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_queen/ringtones.json)
 * **tonos_de_risas_de_bebes:** [Purgar Caché de tonos_de_risas_de_bebes](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_de_risas_de_bebes/ringtones.json)
 * **tonos_anime:** [Purgar Caché de tonos_anime](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_anime/ringtones.json)
+* **tonos_bts:** [Purgar Caché de tonos_bts](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_bts/ringtones.json)
+* **tonos_de_animales:** [Purgar Caché de tonos_de_animales](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_de_animales/ringtones.json)
+* **tonos_galaxy_s20_ultra:** [Purgar Caché de tonos_galaxy_s20_ultra](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_galaxy_s20_ultra/ringtones.json)
+* **tonos_galaxy_s22:** [Purgar Caché de tonos_galaxy_s22](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_galaxy_s22/ringtones.json)
+* **tonos_galaxy_s7:** [Purgar Caché de tonos_galaxy_s7](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_galaxy_s7/ringtones.json)
+* **tonos_galaxy_s9:** [Purgar Caché de tonos_galaxy_s9](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_galaxy_s9/ringtones.json)
+* **tonos_musica_country:** [Purgar Caché de tonos_musica_country](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_musica_country/ringtones.json)
 * **z_flip:** [Purgar Caché de z_flip](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/z_flip/ringtones.json)
 
 
