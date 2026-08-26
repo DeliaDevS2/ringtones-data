@@ -12,6 +12,7 @@ Sabrás que funcionó cuando la página muestre un mensaje que dice `"status": "
 * **tonos_queen:** [Purgar Caché de tonos_queen](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_queen/ringtones.json)
 * **tonos_de_risas_de_bebes:** [Purgar Caché de tonos_de_risas_de_bebes](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_de_risas_de_bebes/ringtones.json)
 * **tonos_anime:** [Purgar Caché de tonos_anime](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_anime/ringtones.json)
+* **z_flip:** [Purgar Caché de z_flip](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/z_flip/ringtones.json)
 
 
 
