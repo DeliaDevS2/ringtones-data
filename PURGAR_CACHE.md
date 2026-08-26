@@ -18,6 +18,8 @@ Sabrás que funcionó cuando la página muestre un mensaje que dice `"status": "
 * **tonos_galaxy_s22:** [Purgar Caché de tonos_galaxy_s22](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_galaxy_s22/ringtones.json)
 * **tonos_galaxy_s7:** [Purgar Caché de tonos_galaxy_s7](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_galaxy_s7/ringtones.json)
 * **tonos_galaxy_s9:** [Purgar Caché de tonos_galaxy_s9](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_galaxy_s9/ringtones.json)
+* **tonos_huawei_p30_pro:** [Purgar Caché de tonos_huawei_p30_pro](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_huawei_p30_pro/ringtones.json)
+* **tonos_mother:** [Purgar Caché de tonos_mother](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_mother/ringtones.json)
 * **tonos_musica_country:** [Purgar Caché de tonos_musica_country](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/tonos_musica_country/ringtones.json)
 * **z_flip:** [Purgar Caché de z_flip](https://purge.jsdelivr.net/gh/DeliaDevS2/ringtones-data@main/z_flip/ringtones.json)
 
