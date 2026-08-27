@@ -39,7 +39,7 @@ def purge_cdn():
     fallos = 0
         
     for folder in carpetas_validas:
-        url = f"https://purge.jsdelivr.net/gh/DarkJ-18/ringtones-data@main/{folder}/ringtones.json"
+        url = f"https://purge.jsdelivr.net/gh/DeliaDevS2-18/ringtones-data@main/{folder}/ringtones.json"
         print_out(f"\n---> Purgando cache para: {folder}")
         print_out(f"URL: {url}")
         
