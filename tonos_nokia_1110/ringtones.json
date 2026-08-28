@@ -1,0 +1,16 @@
+[
+    {
+        "id": "1",
+        "title": "1110 Nokia",
+        "subtitle": "Ringtones 1",
+        "audioPath": "audios/1110-nokia---ringtones-1.mp3",
+        "posterPath": "images/1110-nokia---ringtones-1.png"
+    },
+    {
+        "id": "2",
+        "title": "3310 Klasik",
+        "subtitle": "Ringtones 2",
+        "audioPath": "audios/3310-klasik---ringtones-2.mp3",
+        "posterPath": "images/3310-klasik---ringtones-2.png"
+    }
+]
