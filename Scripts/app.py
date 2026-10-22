@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import time
 import threading
@@ -11,6 +12,13 @@ import re
 import subprocess
 import traceback
 from flask import Flask, request, jsonify, render_template
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 # Hexagonal architecture imports
 from hex_core.domain.profile import Profile
@@ -75,7 +83,29 @@ def parse_time_to_ms(time_str: str) -> int:
 
 def add_log(msg):
     job_status["logs"].append(msg)
-    print(msg)
+    try:
+        print(msg)
+    except Exception:
+        pass
+
+def sanitize_youtube_url(url: str) -> str:
+    if not url:
+        return ""
+    url = url.strip()
+    # Si contiene watch?v=, extraer solo hasta el ID del video (11 caracteres)
+    if "watch?v=" in url:
+        m = re.search(r'(https?://[^/]+/watch\?v=[a-zA-Z0-9_-]{11})', url)
+        if m:
+            return m.group(1)
+    elif "youtu.be/" in url:
+        m = re.search(r'(https?://youtu\.be/[a-zA-Z0-9_-]{11})', url)
+        if m:
+            return m.group(1)
+    elif "shorts/" in url:
+        m = re.search(r'(https?://[^/]+/shorts/[a-zA-Z0-9_-]{11})', url)
+        if m:
+            return m.group(1)
+    return url
 
 def clean_youtube_title(title_str):
     fluff_patterns = [
@@ -156,6 +186,7 @@ def apply_anti_copyright_effects(cancion, pitch, bass, pan, pan_dinamico=False):
     return cancion
 
 def get_cached_audio(url, ffmpeg_path, js_runtimes, log_func=print):
+    url = sanitize_youtube_url(url)
     url_hash = hashlib.md5(url.encode()).hexdigest()
     cached_file = os.path.join(CACHE_FOLDER, f"{url_hash}.mp3")
     meta_path = os.path.join(CACHE_FOLDER, f"{url_hash}.json")
@@ -169,7 +200,11 @@ def get_cached_audio(url, ffmpeg_path, js_runtimes, log_func=print):
         except Exception as e:
             log_func(f"⚠️ Caché corrupta, descargando de nuevo: {e}")
             
-    log_func(f"📥 Descargando audio original: {url}")
+    try:
+        log_func(f"📥 Descargando audio original: {url}")
+    except Exception:
+        pass
+
     ydl_opts = {
         "format": "bestaudio/best",
         "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}],
@@ -177,7 +212,8 @@ def get_cached_audio(url, ffmpeg_path, js_runtimes, log_func=print):
         "quiet": True,
         "no_warnings": True,
         "extract_flat": False,
-        "extractor_args": {"youtube": {"player_client": ["android"]}}
+        "noplaylist": True,
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}}
     }
     if js_runtimes:
         ydl_opts["js_runtimes"] = js_runtimes
@@ -205,7 +241,7 @@ def get_cached_audio(url, ffmpeg_path, js_runtimes, log_func=print):
 # -- Funciones de DB JSON --
 db_lock = threading.Lock()
 
-def update_json_db(folder_path, folder_name, song_title, song_artist, audio_filename):
+def update_json_db(folder_path, folder_name, song_title, song_artist, audio_filename, poster_filename=""):
     json_path = os.path.join(folder_path, "ringtones.json")
     
     with db_lock:
@@ -231,10 +267,17 @@ def update_json_db(folder_path, folder_name, song_title, song_artist, audio_file
                 
         new_id = str(max_id + 1)
         audio_path_db = f"audios/{audio_filename}"
+        poster_path_db = f"images/{poster_filename}" if poster_filename else ""
         
         # Check if already exists by audioPath
         for item in data:
             if item.get("audioPath") == audio_path_db:
+                # Si se subió foto y antes no tenía o es nueva, actualizar el posterPath
+                if poster_path_db and item.get("posterPath") != poster_path_db:
+                    item["posterPath"] = poster_path_db
+                    with open(json_path, "w", encoding="utf-8") as f:
+                        json.dump(data, f, indent=4, ensure_ascii=False)
+                    return True
                 return False # Ya existe en el JSON
         
         new_entry = {
@@ -242,7 +285,7 @@ def update_json_db(folder_path, folder_name, song_title, song_artist, audio_file
             "title": song_title,
             "subtitle": song_artist,
             "audioPath": audio_path_db,
-            "posterPath": ""
+            "posterPath": poster_path_db
         }
         data.append(new_entry)
         
@@ -312,17 +355,51 @@ def process_single_task(task, folder_name, ffmpeg_path, js_runtimes, force_overw
         
         final_path = os.path.join(audios_folder, final_name)
 
+        # Manejo de la foto/imagen subida
+        image_data = task.get("image_data", "").strip()
+        poster_filename = ""
+        if image_data and "," in image_data:
+            try:
+                import base64
+                header, encoded = image_data.split(",", 1)
+                img_bytes = base64.b64decode(encoded)
+
+                # Validación de seguridad en el backend (peso y cabeceras mágicas)
+                if len(img_bytes) < 50 or len(img_bytes) > 15 * 1024 * 1024:
+                    raise Exception("Tamaño de imagen inválido")
+
+                img_ext = "png"
+                if img_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+                    img_ext = "png"
+                elif img_bytes[:2] == b'\xff\xd8':
+                    img_ext = "jpg"
+                elif img_bytes[:4] == b'RIFF' and img_bytes[8:12] == b'WEBP':
+                    img_ext = "webp"
+                else:
+                    raise Exception("Cabecera de imagen no reconocida")
+                
+                base_name = final_name.rsplit(".", 1)[0]
+                poster_filename = f"{base_name}.{img_ext}"
+                poster_path = os.path.join(images_folder, poster_filename)
+                
+                with open(poster_path, "wb") as img_file:
+                    img_file.write(img_bytes)
+                add_log(f"🖼️ Foto guardada ({img_ext.upper()} 512x512): {poster_filename}")
+            except Exception as img_err:
+                add_log(f"⚠️ Error validando/guardando foto: {str(img_err)}")
+                poster_filename = ""
+
         if not force_overwrite and os.path.exists(final_path):
             add_log(f"⚠️ Omitida la descarga (ya existe audio en disco): {final_name}")
-            db_updated = update_json_db(target_folder, safe_folder, song, artist, final_name)
+            db_updated = update_json_db(target_folder, safe_folder, song, artist, final_name, poster_filename)
             if db_updated:
-                add_log(f"✅ Pero fue agregada a la base de datos (faltaba en el JSON): {final_name}")
+                add_log(f"✅ Pero fue actualizada la base de datos (con foto o ID): {final_name}")
             return {"status": "skipped_existing"}
 
         cancion.export(final_path, format="mp3", bitrate="192k")
         
         # Update JSON DB
-        db_updated = update_json_db(target_folder, safe_folder, song, artist, final_name)
+        db_updated = update_json_db(target_folder, safe_folder, song, artist, final_name, poster_filename)
         if db_updated:
             add_log(f"✅ DB actualizada y completado: {final_name}")
         else:
@@ -415,7 +492,7 @@ def cleanup_old_previews():
 def preview_api():
     threading.Thread(target=cleanup_old_previews, daemon=True).start()
     data = request.json
-    url = data.get("url", "").strip()
+    url = sanitize_youtube_url(data.get("url", ""))
     if not url: return jsonify({"error": "URL requerida"}), 400
 
     try:
@@ -426,7 +503,7 @@ def preview_api():
 
         ffmpeg_path = setup_ffmpeg()
         js_runtimes = get_js_runtimes()
-        filename_mp3, _ = get_cached_audio(url, ffmpeg_path, js_runtimes, log_func=print)
+        filename_mp3, _ = get_cached_audio(url, ffmpeg_path, js_runtimes, log_func=lambda msg: None)
 
         cancion = AudioSegment.from_file(filename_mp3)
         start_ms = parse_time_to_ms(data.get("start", "0:00"))

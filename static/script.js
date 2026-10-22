@@ -358,44 +358,192 @@ document.addEventListener('DOMContentLoaded', () => {
             updateQueueCount();
         });
 
+        // Image / Photo Upload Logic
+        const imgFileInput = card.querySelector('.task-img-file');
+        const imgPreviewBox = card.querySelector('.task-img-preview');
+        const imgPreviewThumb = card.querySelector('.preview-img-thumb');
+        const noImgText = card.querySelector('.no-img-text');
+        const imgFilename = card.querySelector('.img-filename');
+        const removeImgBtn = card.querySelector('.remove-img-btn');
+
+        const imgDimensions = card.querySelector('.img-dimensions');
+
+        card._imageData = data.image_data || null;
+
+        if (data.posterPath) {
+            imgFilename.textContent = data.posterPath;
+        }
+
+        if (imgFileInput) {
+            imgFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // 1. Validación de formato de archivo
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+                if (!validTypes.includes(file.type.toLowerCase())) {
+                    showToast("Formato no compatible. Por favor sube una imagen JPG, PNG o WEBP.", "warning");
+                    imgFileInput.value = '';
+                    return;
+                }
+
+                // 2. Validación de peso máximo (10 MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showToast("La imagen supera el peso máximo permitido (10 MB).", "warning");
+                    imgFileInput.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const tempImg = new Image();
+                    tempImg.onload = () => {
+                        const origW = tempImg.naturalWidth;
+                        const origH = tempImg.naturalHeight;
+
+                        // Auto-recorte centrado y redimensionado a 512x512 exactos (estándar de la app)
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 512;
+                        canvas.height = 512;
+                        const ctx = canvas.getContext('2d');
+
+                        const minSide = Math.min(origW, origH);
+                        const sx = (origW - minSide) / 2;
+                        const sy = (origH - minSide) / 2;
+
+                        ctx.drawImage(tempImg, sx, sy, minSide, minSide, 0, 0, 512, 512);
+
+                        const optimizedDataUrl = canvas.toDataURL('image/png');
+
+                        card._imageData = optimizedDataUrl;
+                        imgPreviewThumb.src = optimizedDataUrl;
+                        imgPreviewThumb.style.display = 'block';
+                        noImgText.style.display = 'none';
+                        imgFilename.textContent = file.name;
+
+                        if (imgDimensions) {
+                            imgDimensions.textContent = `✅ 512x512 px (Ajustada desde ${origW}x${origH})`;
+                            imgDimensions.style.display = 'inline';
+                        }
+                        removeImgBtn.style.display = 'inline-flex';
+                    };
+                    tempImg.onerror = () => {
+                        showToast("El archivo de imagen no es válido o está dañado.", "error");
+                    };
+                    tempImg.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        if (imgPreviewBox) {
+            imgPreviewBox.addEventListener('click', () => {
+                if (imgFileInput) imgFileInput.click();
+            });
+        }
+
+        if (removeImgBtn) {
+            removeImgBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                card._imageData = null;
+                if (imgFileInput) imgFileInput.value = '';
+                imgPreviewThumb.src = '';
+                imgPreviewThumb.style.display = 'none';
+                noImgText.style.display = 'block';
+                imgFilename.textContent = 'Sin foto seleccionada';
+                if (imgDimensions) {
+                    imgDimensions.textContent = '';
+                    imgDimensions.style.display = 'none';
+                }
+                removeImgBtn.style.display = 'none';
+            });
+        }
+
+        // Auto clean URL helper
+        const urlInput = card.querySelector('.task-url');
+        const cleanUrlInput = () => {
+            let val = urlInput.value.trim();
+            if (val.includes('watch?v=')) {
+                const match = val.match(/(https?:\/\/[^\/]+\/watch\?v=[a-zA-Z0-9_-]{11})/);
+                if (match && val !== match[1]) {
+                    urlInput.value = match[1];
+                }
+            } else if (val.includes('youtu.be/')) {
+                const match = val.match(/(https?:\/\/youtu\.be\/[a-zA-Z0-9_-]{11})/);
+                if (match && val !== match[1]) {
+                    urlInput.value = match[1];
+                }
+            } else if (val.includes('/shorts/')) {
+                const match = val.match(/(https?:\/\/[^\/]+\/shorts\/[a-zA-Z0-9_-]{11})/);
+                if (match && val !== match[1]) {
+                    urlInput.value = match[1];
+                }
+            }
+        };
+        urlInput.addEventListener('input', cleanUrlInput);
+        urlInput.addEventListener('change', cleanUrlInput);
+        urlInput.addEventListener('paste', () => setTimeout(cleanUrlInput, 50));
+
         // Preview Logic
         const prevBtn = card.querySelector('.preview-btn');
         const audioEl = card.querySelector('.task-audio');
         let lastPayloadStr = null;
+        let previewAbortController = null;
 
         prevBtn.addEventListener('click', async () => {
-            const url = card.querySelector('.task-url').value.trim();
+            // Si ya está cargando, hacer clic cancela la descarga/generación
+            if (previewAbortController) {
+                previewAbortController.abort();
+                previewAbortController = null;
+                prevBtn.textContent = '🎧 Previa';
+                prevBtn.classList.remove('btn-danger');
+                prevBtn.classList.add('btn-secondary');
+                showToast("Generación de previa cancelada.", "info");
+                return;
+            }
+
+            cleanUrlInput();
+            const url = urlInput.value.trim();
             if(!url) return showToast("Falta la URL de YouTube", "warning");
 
             const payload = {
                 url,
-                start: card.querySelector('.task-start-m').value,
-                duration: card.querySelector('.task-dur-m').value,
-                speed: parseFloat(card.querySelector('.task-speed').value),
-                pitch: parseFloat(card.querySelector('.task-pitch').value),
-                bass: parseFloat(card.querySelector('.task-bass').value),
-                pan: parseFloat(card.querySelector('.task-pan').value),
+                start: card.querySelector('.task-start-m').value || "0",
+                duration: card.querySelector('.task-dur-m').value || "30",
+                speed: parseFloat(card.querySelector('.task-speed').value) || 1.0,
+                pitch: parseFloat(card.querySelector('.task-pitch').value) || 0.0,
+                bass: parseFloat(card.querySelector('.task-bass').value) || 0.0,
+                pan: parseFloat(card.querySelector('.task-pan').value) || 0.0,
                 pan_dinamico: card.querySelector('.task-pan-dinamico').checked,
-                fade_in: parseInt(card.querySelector('.task-fade-in').value),
-                fade_out: parseInt(card.querySelector('.task-fade-out').value)
+                fade_in: parseInt(card.querySelector('.task-fade-in').value) || 0,
+                fade_out: parseInt(card.querySelector('.task-fade-out').value) || 0
             };
 
             const payloadStr = JSON.stringify(payload);
             if (lastPayloadStr === payloadStr && audioEl.src) {
-                showToast("Esta previa ya está generada y actualizada. Reproduciendo...", "info");
-                audioEl.play();
+                if (!audioEl.paused) {
+                    audioEl.pause();
+                    prevBtn.textContent = '▶️ Reproducir Previa';
+                    showToast("Previa pausada.", "info");
+                } else {
+                    audioEl.play();
+                    prevBtn.textContent = '⏸️ Pausar Previa';
+                    showToast("Reproduciendo previa...", "info");
+                }
                 return;
             }
 
-            const originalText = prevBtn.textContent;
-            prevBtn.textContent = '⏳ Cargando...';
-            prevBtn.disabled = true;
+            prevBtn.textContent = '🛑 Cancelar';
+            prevBtn.classList.remove('btn-secondary');
+            prevBtn.classList.add('btn-danger');
+            previewAbortController = new AbortController();
 
             try {
                 const res = await fetch('/api/preview', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: payloadStr
+                    body: payloadStr,
+                    signal: previewAbortController.signal
                 });
                 const responseData = await res.json();
                 if(responseData.error) throw new Error(responseData.error);
@@ -404,13 +552,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 audioEl.style.display = 'block';
                 audioEl.play();
                 lastPayloadStr = payloadStr;
-                showToast("Nueva previa generada y lista.", "success");
+                showToast("Nueva previa lista y reproduciendo.", "success");
+                prevBtn.textContent = '⏸️ Pausar Previa';
             } catch(e) {
+                if (e.name === 'AbortError') {
+                    // Cancelado por el usuario intencionalmente
+                    return;
+                }
                 showToast("Error generando previa: " + e.message, "error");
+                prevBtn.textContent = '🎧 Previa';
             } finally {
-                prevBtn.textContent = '🎧 Regenerar Previa';
-                prevBtn.disabled = false;
+                previewAbortController = null;
+                prevBtn.classList.remove('btn-danger');
+                prevBtn.classList.add('btn-secondary');
+                if (prevBtn.textContent === '🛑 Cancelar') {
+                    prevBtn.textContent = '🎧 Previa';
+                }
             }
+        });
+
+        // Mantener sincronizado el texto del botón si el usuario usa los controles nativos del audio
+        audioEl.addEventListener('play', () => {
+            if (!previewAbortController) prevBtn.textContent = '⏸️ Pausar Previa';
+        });
+        audioEl.addEventListener('pause', () => {
+            if (!previewAbortController) prevBtn.textContent = '▶️ Reproducir Previa';
+        });
+        audioEl.addEventListener('ended', () => {
+            if (!previewAbortController) prevBtn.textContent = '▶️ Reproducir Previa';
         });
 
         tasksList.appendChild(card);
@@ -451,7 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('loadPastedJsonBtn').addEventListener('click', () => {
         const text = document.getElementById('pasteJsonInput').value.trim();
-        if (!text) return showToast("Pega un JSON primero", "warning");
+        if (!text) return showToast("Pega un JSON o URLs primero", "warning");
         try {
             const data = JSON.parse(text);
             if (Array.isArray(data)) {
@@ -463,6 +632,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("El JSON debe ser una lista/array []");
             }
         } catch (error) {
+            // Si no es JSON válido, verificar si son enlaces URL directos (uno o varios por línea)
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.startsWith('http://') || l.startsWith('https://'));
+            if (lines.length > 0) {
+                tasksList.innerHTML = '';
+                lines.forEach(u => addTask({ url: u }));
+                showToast(`✅ ${lines.length} enlaces detectados y cargados al tablero`, "success");
+                pasteJsonBlock.style.display = 'none';
+                return;
+            }
             showToast("Error parseando JSON: " + error.message, "error");
         }
     });
@@ -478,21 +656,32 @@ document.addEventListener('DOMContentLoaded', () => {
         let valid = true;
 
         cards.forEach(card => {
-            const url = card.querySelector('.task-url').value.trim();
+            let url = card.querySelector('.task-url').value.trim();
             if (!url) return;
+            if (url.includes('watch?v=')) {
+                const match = url.match(/(https?:\/\/[^\/]+\/watch\?v=[a-zA-Z0-9_-]{11})/);
+                if (match) url = match[1];
+            } else if (url.includes('youtu.be/')) {
+                const match = url.match(/(https?:\/\/youtu\.be\/[a-zA-Z0-9_-]{11})/);
+                if (match) url = match[1];
+            } else if (url.includes('/shorts/')) {
+                const match = url.match(/(https?:\/\/[^\/]+\/shorts\/[a-zA-Z0-9_-]{11})/);
+                if (match) url = match[1];
+            }
             tasks.push({
                 url,
                 artist: card.querySelector('.task-artist').value.trim(),
                 title: card.querySelector('.task-title').value.trim(),
-                start: card.querySelector('.task-start-m').value,
-                duration: card.querySelector('.task-dur-m').value,
-                speed: parseFloat(card.querySelector('.task-speed').value),
-                pitch: parseFloat(card.querySelector('.task-pitch').value),
-                bass: parseFloat(card.querySelector('.task-bass').value),
-                pan: parseFloat(card.querySelector('.task-pan').value),
+                image_data: card._imageData || "",
+                start: card.querySelector('.task-start-m').value || "0",
+                duration: card.querySelector('.task-dur-m').value || "30",
+                speed: parseFloat(card.querySelector('.task-speed').value) || 1.0,
+                pitch: parseFloat(card.querySelector('.task-pitch').value) || 0.0,
+                bass: parseFloat(card.querySelector('.task-bass').value) || 0.0,
+                pan: parseFloat(card.querySelector('.task-pan').value) || 0.0,
                 pan_dinamico: card.querySelector('.task-pan-dinamico').checked,
-                fade_in: parseInt(card.querySelector('.task-fade-in').value),
-                fade_out: parseInt(card.querySelector('.task-fade-out').value)
+                fade_in: parseInt(card.querySelector('.task-fade-in').value) || 0,
+                fade_out: parseInt(card.querySelector('.task-fade-out').value) || 0
             });
         });
 
