@@ -712,5 +712,138 @@
         "subtitle": "Job Gonzalez",
         "audioPath": "audios/job-gonzalez-tu-eres-mi-todo.mp3",
         "posterPath": ""
+    },
+    {
+        "id": "103",
+        "title": "estar con tigo 1",
+        "subtitle": "ESTAR CONTIGO | LETRA",
+        "audioPath": "audios/estar-contigo-letra-estar-con-tigo-1.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "104",
+        "title": "estar con tigo 2",
+        "subtitle": "ESTAR CONTIGO | LETRA",
+        "audioPath": "audios/estar-contigo-letra-estar-con-tigo-2.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "105",
+        "title": "estar con tigo",
+        "subtitle": "ESTAR CONTIGO | LETRA",
+        "audioPath": "audios/estar-contigo-letra-estar-con-tigo.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "106",
+        "title": "estar con tigo 3",
+        "subtitle": "ESTAR CONTIGO | LETRA",
+        "audioPath": "audios/estar-contigo-letra-estar-con-tigo-3.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "107",
+        "title": "aleluya  1",
+        "subtitle": "",
+        "audioPath": "audios/aleluya-1.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "108",
+        "title": "aleluya",
+        "subtitle": "",
+        "audioPath": "audios/aleluya.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "109",
+        "title": "para siempre rey 1",
+        "subtitle": "Job Gonzalez",
+        "audioPath": "audios/job-gonzalez-para-siempre-rey-1.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "110",
+        "title": "para siempre rey",
+        "subtitle": "Job Gonzalez",
+        "audioPath": "audios/job-gonzalez-para-siempre-rey.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "111",
+        "title": "para siempre rey 2",
+        "subtitle": "Job Gonzalez",
+        "audioPath": "audios/job-gonzalez-para-siempre-rey-2.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "112",
+        "title": "en lo alto",
+        "subtitle": "Job González",
+        "audioPath": "audios/job-gonzalez-en-lo-alto.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "113",
+        "title": "tu amor",
+        "subtitle": "Tu Amor",
+        "audioPath": "audios/tu-amor-tu-amor.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "114",
+        "title": "en lo alto  1",
+        "subtitle": "Job González",
+        "audioPath": "audios/job-gonzalez-en-lo-alto-1.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "115",
+        "title": "tu amor 1",
+        "subtitle": "Tu Amor",
+        "audioPath": "audios/tu-amor-tu-amor-1.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "116",
+        "title": "lo haras otra vez",
+        "subtitle": "",
+        "audioPath": "audios/lo-haras-otra-vez.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "117",
+        "title": "historia de amor",
+        "subtitle": "Historia de Amor",
+        "audioPath": "audios/historia-de-amor-historia-de-amor.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "118",
+        "title": "quedate con lo sencillo",
+        "subtitle": "Quédate Con lo Sencillo",
+        "audioPath": "audios/quedate-con-lo-sencillo-quedate-con-lo-sencillo.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "119",
+        "title": "vuelvo a ti",
+        "subtitle": "La Canción Cristiana Más Hermosa // Te Hara Llorar // Vuelvo a ti",
+        "audioPath": "audios/la-cancion-cristiana-mas-hermosa-te-hara-llorar-vuelvo-a-ti-vuelvo-a-ti.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "120",
+        "title": "vuelvo a ti 1",
+        "subtitle": "La Canción Cristiana Más Hermosa // Te Hara Llorar // Vuelvo a ti",
+        "audioPath": "audios/la-cancion-cristiana-mas-hermosa-te-hara-llorar-vuelvo-a-ti-vuelvo-a-ti-1.mp3",
+        "posterPath": ""
+    },
+    {
+        "id": "121",
+        "title": "vuelvo a ti 2",
+        "subtitle": "La Canción Cristiana Más Hermosa // Te Hara Llorar // Vuelvo a ti",
+        "audioPath": "audios/la-cancion-cristiana-mas-hermosa-te-hara-llorar-vuelvo-a-ti-vuelvo-a-ti-2.mp3",
+        "posterPath": ""
     }
 ]
