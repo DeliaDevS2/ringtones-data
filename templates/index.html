@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Architect Pro | Editor Web</title>
-    <link rel="stylesheet" href="/static/style.css?v=3.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.7">
 </head>
 <body>
     <div class="app-layout">
@@ -37,14 +37,35 @@
                 </div>
 
                 <div class="glass-panel">
-                    <div class="grid-2">
-                        <div class="input-group">
-                            <label>Repositorio de Destino (Carpeta) <span class="help-icon" data-tooltip="Nombre de la carpeta de género donde se guardará (ej. salsa, pop, bachata).">?</span></label>
-                            <input type="text" id="folderName" placeholder="salsa" />
+                    <div class="grid-2" style="align-items: flex-end;">
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <label style="margin: 0;">📁 Carpeta de Destino (Género) <span class="help-icon" data-tooltip="Selecciona una carpeta existente en el repositorio o crea una nueva con el botón ➕.">?</span></label>
+                                <button type="button" id="refreshFoldersBtn" style="background: none; border: none; color: var(--accent-cyan); font-size: 0.78rem; cursor: pointer; padding: 0; text-decoration: underline;" title="Recargar lista de carpetas">🔄 Actualizar lista</button>
+                            </div>
+                            
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select id="folderSelect" style="flex: 1; min-width: 0;">
+                                    <option value="">Cargando carpetas existentes...</option>
+                                </select>
+                                <button type="button" id="toggleNewFolderBtn" class="btn btn-secondary" style="white-space: nowrap; padding: 0.55rem 0.9rem;" title="Crear nueva carpeta">➕ Nueva</button>
+                            </div>
+                            
+                            <!-- Contenedor desplegable para crear nueva carpeta -->
+                            <div id="newFolderContainer" style="display: none; margin-top: 8px; background: rgba(56, 189, 248, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px dashed rgba(56, 189, 248, 0.35);">
+                                <div style="display: flex; gap: 6px;">
+                                    <input type="text" id="newFolderNameInput" placeholder="Nombre nueva carpeta (ej. bachata_2024)" style="font-size: 0.85rem;" />
+                                    <button type="button" id="confirmNewFolderBtn" class="btn btn-primary" style="padding: 0.45rem 0.85rem; font-size: 0.8rem; white-space: nowrap;">Crear</button>
+                                    <button type="button" id="cancelNewFolderBtn" class="btn btn-danger" style="padding: 0.45rem 0.7rem; font-size: 0.8rem;">✕</button>
+                                </div>
+                            </div>
+
+                            <!-- Input oculto que mantiene la compatibilidad de folderName con todo el sistema -->
+                            <input type="hidden" id="folderName" value="tonos_cristianos" />
                         </div>
-                        <div style="display: flex; align-items: flex-end; gap: 10px; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: flex-end; gap: 10px; margin-bottom: 0;">
                             <button id="pasteJsonToggleBtn" class="btn btn-secondary" style="width: 100%;">📋 Pegar JSON</button>
-                            <label for="bulkUploadFile" class="btn btn-secondary" style="width: 100%;">📂 Cargar Bulk (.json)</label>
+                            <label for="bulkUploadFile" class="btn btn-secondary" style="width: 100%; text-align: center; cursor: pointer; margin: 0;">📂 Cargar Bulk (.json)</label>
                             <input type="file" id="bulkUploadFile" accept=".json" style="display:none;" />
                         </div>
                     </div>
@@ -286,26 +307,45 @@
                 </div>
             </div>
             
-            <div class="grid-4" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <div class="input-group">
-                    <label>Inicio (s) <span class="help-icon" data-tooltip="Punto de inicio en segundos.">?</span></label>
-                    <input type="text" class="task-start-m" placeholder="00" value="0" />
-                </div>
-                <div class="input-group">
-                    <label>Duración (s)</label>
-                    <input type="text" class="task-dur-m" placeholder="00" value="30" />
-                </div>
-                <div class="input-group">
-                    <label>Velocidad</label>
-                    <input type="number" class="task-speed" step="0.05" min="0.5" max="2.0" value="1.0" />
-                </div>
-                <div class="input-group">
-                    <label>Fade (In/Out)</label>
-                    <div style="display: flex; gap: 5px; align-items: center;">
-                        <input type="number" class="task-fade-in" min="0" value="2" style="width: 50%; padding: 0.5rem;" title="Fade In (Seg)"/>
-                        <span style="color:var(--text-muted);">/</span>
-                        <input type="number" class="task-fade-out" min="0" value="2" style="width: 50%; padding: 0.5rem;" title="Fade Out (Seg)"/>
+            <div style="background: rgba(0,0,0,0.25); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.04);">
+                <div class="grid-4" style="margin-bottom: 10px;">
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label>Inicio <span class="help-icon" data-tooltip="Minuto o segundo de inicio (ej. 1:30, 0:45 o 90)">?</span></label>
+                        <input type="text" class="task-start-m" placeholder="ej. 1:30 o 0" value="0" />
+                        <small style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 4px;">Ej. 1:30 o 90s</small>
                     </div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label>Fin o Duración <span class="help-icon" data-tooltip="Hasta qué minuto terminar (ej. 2:00) O cuántos segundos dura (ej. 30 o 45s)">?</span></label>
+                        <input type="text" class="task-dur-m" placeholder="ej. 2:00 o 30" value="30" />
+                        <small style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 4px;">Ej. 2:00 o 30s</small>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label>Velocidad</label>
+                        <input type="number" class="task-speed" step="0.05" min="0.5" max="2.0" value="1.0" />
+                        <small style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 4px;">Normal: 1.0</small>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label>Fade (In/Out)</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="number" class="task-fade-in" min="0" value="2" style="width: 50%; padding: 0.5rem;" title="Fade In (Seg)"/>
+                            <span style="color:var(--text-muted);">/</span>
+                            <input type="number" class="task-fade-out" min="0" value="2" style="width: 50%; padding: 0.5rem;" title="Fade Out (Seg)"/>
+                        </div>
+                        <small style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 4px;">Segundos In / Out</small>
+                    </div>
+                </div>
+
+                <!-- Insignia de corte de ancho 100% independiente del grid -->
+                <div class="time-cut-badge" style="width: 100%; box-sizing: border-box; font-size: 0.8rem; color: var(--text-main); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; background: rgba(56, 189, 248, 0.08); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.25);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="time-cut-icon">⏱️</span>
+                        <span>Corte:</span>
+                        <strong class="time-cut-summary" style="color: #38bdf8;">30s de audio</strong>
+                        <span class="time-cut-range" style="color: var(--text-muted); font-size: 0.75rem;">(desde 0:00 hasta 0:30)</span>
+                    </div>
+                    <span style="font-size: 0.72rem; color: #94a3b8; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+                        💡 <strong>Ejemplos:</strong> Minutos <code>1:30</code> a <code>2:00</code> (calcula 30s) o duración directa <code>30s</code>
+                    </span>
                 </div>
             </div>
 
@@ -334,6 +374,6 @@
         </div>
     </template>
 
-    <script src="/static/script.js?v=3.4"></script>
+    <script src="/static/script.js?v=3.7"></script>
 </body>
 </html>

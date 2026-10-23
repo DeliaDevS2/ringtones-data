@@ -240,29 +240,41 @@ input:focus, select:focus, textarea:focus {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.12);
     color: var(--text-muted);
     font-size: 10px;
     cursor: help;
     position: relative;
+    vertical-align: middle;
 }
 .help-icon:hover::after {
     content: attr(data-tooltip);
     position: absolute;
-    bottom: 150%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--bg-base);
-    color: #fff;
-    padding: 0.5rem 0.8rem;
+    bottom: calc(100% + 8px);
+    left: 0;
+    transform: none;
+    background: #0b1329;
+    color: #f1f5f9;
+    padding: 0.6rem 0.85rem;
     border-radius: 6px;
-    font-size: 0.8rem;
-    white-space: pre-wrap;
-    width: max-content;
-    max-width: 250px;
+    font-size: 0.78rem;
+    font-weight: normal;
+    line-height: 1.4;
+    white-space: normal;
+    width: 250px;
     border: 1px solid var(--accent-cyan);
-    z-index: 100;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    z-index: 99999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.85);
+    pointer-events: none;
+}
+.help-icon:hover::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 4px;
+    border: 5px solid transparent;
+    border-top-color: var(--accent-cyan);
+    z-index: 100000;
 }
 
 /* Toast Notifications */

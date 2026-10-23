@@ -294,6 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
         executeScript("subir_github", "toolsConsole");
     });
 
+    document.getElementById('gitSyncBtn')?.addEventListener('click', () => {
+        const toolsNavBtn = document.querySelector('button[data-target="tools-tab"]');
+        if (toolsNavBtn) toolsNavBtn.click();
+        executeScript("subir_github", "toolsConsole");
+    });
+
     document.getElementById('clearCacheBtn').addEventListener('click', () => {
         const consoleEl = document.getElementById("toolsConsole");
         consoleEl.textContent = "Limpiando caché...\n";
@@ -316,8 +322,197 @@ document.addEventListener('DOMContentLoaded', () => {
     const template = document.getElementById('taskTemplate');
     const ytConsole = document.getElementById('ytConsole');
     
+    // --- FOLDER SELECTOR & CREATOR LOGIC ---
+    const folderSelect = document.getElementById('folderSelect');
+    const folderNameHidden = document.getElementById('folderName');
+    const refreshFoldersBtn = document.getElementById('refreshFoldersBtn');
+    const toggleNewFolderBtn = document.getElementById('toggleNewFolderBtn');
+    const newFolderContainer = document.getElementById('newFolderContainer');
+    const newFolderNameInput = document.getElementById('newFolderNameInput');
+    const confirmNewFolderBtn = document.getElementById('confirmNewFolderBtn');
+    const cancelNewFolderBtn = document.getElementById('cancelNewFolderBtn');
+
+    async function loadFolders(selectedToSet = null) {
+        try {
+            const res = await fetch('/api/folders');
+            if (!res.ok) throw new Error("Error cargando carpetas");
+            const data = await res.json();
+            const folders = data.folders || [];
+
+            if (folderSelect) {
+                folderSelect.innerHTML = '';
+                if (folders.length === 0) {
+                    folderSelect.innerHTML = '<option value="">No hay carpetas existentes</option>';
+                } else {
+                    folders.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f;
+                        opt.textContent = `📁 ${f}`;
+                        folderSelect.appendChild(opt);
+                    });
+                }
+
+                // Determinar cuál seleccionar (preferencia guardada o predeterminada)
+                const savedFolder = selectedToSet || localStorage.getItem('selectedFolder') || (folderNameHidden ? folderNameHidden.value : '') || 'tonos_cristianos';
+                if (folders.includes(savedFolder)) {
+                    folderSelect.value = savedFolder;
+                    if (folderNameHidden) folderNameHidden.value = savedFolder;
+                } else if (folders.length > 0) {
+                    folderSelect.value = folders[0];
+                    if (folderNameHidden) folderNameHidden.value = folders[0];
+                }
+            }
+        } catch (e) {
+            console.error("Error al obtener carpetas:", e);
+            if (folderSelect) {
+                folderSelect.innerHTML = '<option value="tonos_cristianos">📁 tonos_cristianos</option>';
+            }
+        }
+    }
+
+    if (folderSelect) {
+        folderSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (folderNameHidden) folderNameHidden.value = val;
+            if (val) localStorage.setItem('selectedFolder', val);
+        });
+    }
+
+    if (refreshFoldersBtn) {
+        refreshFoldersBtn.addEventListener('click', async () => {
+            const currentVal = folderSelect ? folderSelect.value : null;
+            await loadFolders(currentVal);
+            showToast("Lista de carpetas actualizada desde el disco.", "success");
+        });
+    }
+
+    if (toggleNewFolderBtn) {
+        toggleNewFolderBtn.addEventListener('click', () => {
+            const isHidden = newFolderContainer.style.display === 'none';
+            newFolderContainer.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) {
+                newFolderNameInput.value = '';
+                newFolderNameInput.focus();
+            }
+        });
+    }
+
+    if (cancelNewFolderBtn) {
+        cancelNewFolderBtn.addEventListener('click', () => {
+            newFolderContainer.style.display = 'none';
+            newFolderNameInput.value = '';
+        });
+    }
+
+    if (confirmNewFolderBtn) {
+        confirmNewFolderBtn.addEventListener('click', async () => {
+            const name = newFolderNameInput.value.trim();
+            if (!name) return showToast("Escribe un nombre para la nueva carpeta.", "warning");
+
+            try {
+                confirmNewFolderBtn.disabled = true;
+                confirmNewFolderBtn.textContent = 'Creando...';
+                const res = await fetch('/api/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Error al crear carpeta");
+
+                const createdFolder = data.folder;
+                await loadFolders(createdFolder);
+                newFolderContainer.style.display = 'none';
+                newFolderNameInput.value = '';
+                showToast(`Carpeta "${createdFolder}" creada y seleccionada con éxito.`, "success");
+            } catch (err) {
+                showToast("Error: " + err.message, "error");
+            } finally {
+                confirmNewFolderBtn.disabled = false;
+                confirmNewFolderBtn.textContent = 'Crear';
+            }
+        });
+
+        newFolderNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') confirmNewFolderBtn.click();
+            if (e.key === 'Escape') cancelNewFolderBtn.click();
+        });
+    }
+
+    // Inicializar carpetas al cargar
+    loadFolders();
+
     function updateQueueCount() {
         document.getElementById('queueTitle').textContent = `Cola de Tareas (${tasksList.querySelectorAll('.task-card').length})`;
+    }
+
+    // --- TIME HELPERS (MM:SS, RAW SECONDS & END TIMESTAMPS) ---
+    function parseTimeToSeconds(val) {
+        if (!val && val !== 0) return 0;
+        val = String(val).trim().toLowerCase().replace('s', '');
+        if (!val) return 0;
+        if (val.includes(':')) {
+            const parts = val.split(':').map(p => parseFloat(p) || 0);
+            if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            if (parts.length === 2) return parts[0] * 60 + parts[1];
+        }
+        return parseFloat(val) || 0;
+    }
+
+    function formatSecondsToTime(sec) {
+        if (isNaN(sec) || sec < 0) sec = 0;
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        const frac = sec % 1;
+        let res = `${m}:${s < 10 ? '0' : ''}${s}`;
+        if (frac > 0.01) {
+            res += `.${Math.round(frac * 10)}`;
+        }
+        return res;
+    }
+
+    function resolveTimeRange(startStr, durOrEndStr) {
+        const startSec = parseTimeToSeconds(startStr);
+        const rawEnd = String(durOrEndStr || '').trim().toLowerCase().replace('s', '');
+        const parsedSec = parseTimeToSeconds(rawEnd);
+
+        let durationSec = 30;
+        let endSec = startSec + 30;
+        let isEndTime = false;
+
+        if (rawEnd.includes(':')) {
+            if (parsedSec > startSec) {
+                durationSec = parsedSec - startSec;
+                endSec = parsedSec;
+                isEndTime = true;
+            } else {
+                durationSec = parsedSec > 0 ? parsedSec : 30;
+                endSec = startSec + durationSec;
+            }
+        } else {
+            if (parsedSec > startSec && startSec > 0) {
+                durationSec = parsedSec - startSec;
+                endSec = parsedSec;
+                isEndTime = true;
+            } else {
+                durationSec = parsedSec > 0 ? parsedSec : 30;
+                endSec = startSec + durationSec;
+            }
+        }
+
+        if (durationSec <= 0) {
+            durationSec = 30;
+            endSec = startSec + durationSec;
+        }
+
+        return {
+            startSec,
+            durationSec: Math.round(durationSec * 100) / 100,
+            endSec: Math.round(endSec * 100) / 100,
+            isEndTime,
+            formattedStart: formatSecondsToTime(startSec),
+            formattedEnd: formatSecondsToTime(endSec)
+        };
     }
 
     function addTask(data = {}) {
@@ -328,9 +523,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if(data.artist) card.querySelector('.task-artist').value = data.artist;
         if(data.title) card.querySelector('.task-title').value = data.title;
         
-        if (data.start) card.querySelector('.task-start-m').value = data.start;
-        if (data.duration) card.querySelector('.task-dur-m').value = data.duration;
+        const startInput = card.querySelector('.task-start-m');
+        const durInput = card.querySelector('.task-dur-m');
+        const timeCutSummary = card.querySelector('.time-cut-summary');
+        const timeCutRange = card.querySelector('.time-cut-range');
+
+        if (data.start !== undefined && data.start !== null) startInput.value = data.start;
+        if (data.duration !== undefined && data.duration !== null) durInput.value = data.duration;
         if (data.speed) card.querySelector('.task-speed').value = data.speed;
+
+        const updateTimeBadge = () => {
+            const range = resolveTimeRange(startInput.value, durInput.value);
+            const iconEl = card.querySelector('.time-cut-icon');
+            if (timeCutSummary) {
+                const sText = (range.durationSec % 1 === 0) ? `${range.durationSec}s` : `${range.durationSec.toFixed(1)}s`;
+                if (range.isEndTime) {
+                    timeCutSummary.style.color = '#4ade80';
+                    timeCutSummary.textContent = `${sText} de audio (fin exacto)`;
+                    if (iconEl) iconEl.textContent = '🎯';
+                } else {
+                    timeCutSummary.style.color = '#38bdf8';
+                    timeCutSummary.textContent = `${sText} de audio`;
+                    if (iconEl) iconEl.textContent = '⏱️';
+                }
+            }
+            if (timeCutRange) {
+                timeCutRange.textContent = `(desde ${range.formattedStart} hasta ${range.formattedEnd})`;
+            }
+        };
+
+        startInput.addEventListener('input', updateTimeBadge);
+        durInput.addEventListener('input', updateTimeBadge);
+        updateTimeBadge();
         
         // Ranges
         const pitch = card.querySelector('.task-pitch');
@@ -506,10 +730,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = urlInput.value.trim();
             if(!url) return showToast("Falta la URL de YouTube", "warning");
 
+            const timeRange = resolveTimeRange(
+                card.querySelector('.task-start-m').value,
+                card.querySelector('.task-dur-m').value
+            );
+
             const payload = {
                 url,
-                start: card.querySelector('.task-start-m').value || "0",
-                duration: card.querySelector('.task-dur-m').value || "30",
+                start: timeRange.formattedStart,
+                duration: timeRange.durationSec.toString(),
                 speed: parseFloat(card.querySelector('.task-speed').value) || 1.0,
                 pitch: parseFloat(card.querySelector('.task-pitch').value) || 0.0,
                 bass: parseFloat(card.querySelector('.task-bass').value) || 0.0,
@@ -668,13 +897,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const match = url.match(/(https?:\/\/[^\/]+\/shorts\/[a-zA-Z0-9_-]{11})/);
                 if (match) url = match[1];
             }
+            const timeRange = resolveTimeRange(
+                card.querySelector('.task-start-m').value,
+                card.querySelector('.task-dur-m').value
+            );
+
             tasks.push({
                 url,
                 artist: card.querySelector('.task-artist').value.trim(),
                 title: card.querySelector('.task-title').value.trim(),
                 image_data: card._imageData || "",
-                start: card.querySelector('.task-start-m').value || "0",
-                duration: card.querySelector('.task-dur-m').value || "30",
+                start: timeRange.formattedStart,
+                duration: timeRange.durationSec.toString(),
                 speed: parseFloat(card.querySelector('.task-speed').value) || 1.0,
                 pitch: parseFloat(card.querySelector('.task-pitch').value) || 0.0,
                 bass: parseFloat(card.querySelector('.task-bass').value) || 0.0,

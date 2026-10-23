@@ -71,15 +71,80 @@ def clear_cache_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-def parse_time_to_ms(time_str: str) -> int:
-    if not time_str: return 0
+@app.route("/api/folders", methods=["GET"])
+def get_folders():
     try:
-        parts = time_str.split(":")
-        if len(parts) == 2:
-            return (int(parts[0]) * 60 + int(parts[1])) * 1000
-        return int(time_str) * 1000
+        ignore_dirs = {
+            ".git", ".venv", ".cache", ".vscode", "scripts", "static", "templates",
+            ".agents", "__pycache__", "hex_core", ".system_generated"
+        }
+        folders = []
+        for entry in os.scandir(base_dir):
+            if entry.is_dir() and entry.name.lower() not in ignore_dirs and not entry.name.startswith("."):
+                folders.append(entry.name)
+        folders.sort(key=lambda s: s.lower())
+        return jsonify({"folders": folders})
+    except Exception as e:
+        return jsonify({"error": str(e), "folders": []}), 500
+
+@app.route("/api/folders", methods=["POST"])
+def create_folder():
+    try:
+        data = request.json or {}
+        name = data.get("name", "").strip()
+        if not name:
+            return jsonify({"error": "El nombre de la carpeta no puede estar vacío."}), 400
+        
+        # Normalizar nombre seguro para carpetas
+        safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', name).strip('_').lower()
+        if not safe_name:
+            return jsonify({"error": "Nombre de carpeta no válido."}), 400
+            
+        target_path = os.path.join(base_dir, safe_name)
+        os.makedirs(target_path, exist_ok=True)
+        os.makedirs(os.path.join(target_path, "images"), exist_ok=True)
+        return jsonify({"success": True, "folder": safe_name})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def parse_time_to_ms(time_str) -> int:
+    if time_str is None:
+        return 0
+    time_str = str(time_str).strip().lower().replace("s", "")
+    if not time_str:
+        return 0
+    try:
+        if ":" in time_str:
+            parts = [float(p) for p in time_str.split(":")]
+            if len(parts) == 3:
+                return int((parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000)
+            elif len(parts) == 2:
+                return int((parts[0] * 60 + parts[1]) * 1000)
+        return int(float(time_str) * 1000)
     except:
         return 0
+
+def resolve_time_bounds_ms(start_val, dur_or_end_val, default_duration_sec=30):
+    start_ms = parse_time_to_ms(start_val)
+    raw_end = str(dur_or_end_val or "").strip().lower().replace("s", "")
+    parsed_ms = parse_time_to_ms(raw_end)
+    
+    if parsed_ms <= 0:
+        return start_ms, default_duration_sec * 1000
+
+    # Si se especificó con formato de reloj ':' (ej: "2:00", "01:15") y es mayor que start,
+    # el usuario indicó una marca de tiempo final de reloj.
+    if ":" in raw_end and parsed_ms > start_ms:
+        dur_ms = parsed_ms - start_ms
+    else:
+        # Si es un número plano de segundos (ej: "30", "45") o duración ya calculada por el front,
+        # representa directamente la duración deseada.
+        dur_ms = parsed_ms
+            
+    if dur_ms <= 0:
+        dur_ms = default_duration_sec * 1000
+        
+    return start_ms, dur_ms
 
 def add_log(msg):
     job_status["logs"].append(msg)
@@ -302,8 +367,7 @@ def process_single_task(task, folder_name, ffmpeg_path, js_runtimes, force_overw
     if not url:
         return {"status": "skipped", "task": task}
         
-    start_ms = parse_time_to_ms(task.get("start", "0:00"))
-    dur_ms = parse_time_to_ms(task.get("duration", "0:00"))
+    start_ms, dur_ms = resolve_time_bounds_ms(task.get("start", "0:00"), task.get("duration", "0:30"), default_duration_sec=30)
     speed = float(task.get("speed", 1.0))
     pitch = float(task.get("pitch", 0.0))
     bass = float(task.get("bass", 0.0))
@@ -506,8 +570,7 @@ def preview_api():
         filename_mp3, _ = get_cached_audio(url, ffmpeg_path, js_runtimes, log_func=lambda msg: None)
 
         cancion = AudioSegment.from_file(filename_mp3)
-        start_ms = parse_time_to_ms(data.get("start", "0:00"))
-        dur_ms = parse_time_to_ms(data.get("duration", "0:30"))
+        start_ms, dur_ms = resolve_time_bounds_ms(data.get("start", "0:00"), data.get("duration", "0:30"), default_duration_sec=30)
         speed = float(data.get("speed", 1.0))
         end_ms = start_ms + (dur_ms if dur_ms > 0 else 30000)
         cancion = cancion[start_ms:end_ms]
